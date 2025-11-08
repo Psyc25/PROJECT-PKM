@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generator Portofolio</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f7f7f7;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      background: white;
+      padding: 25px;
+      border-radius: 12px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+      width: 320px;
+      text-align: center;
+    }
+    input {
+      width: 100%;
+      padding: 8px;
+      margin: 8px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 8px;
+      border: none;
+      border-radius: 6px;
+      background: #007bff;
+      color: white;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    #logoutBtn {
+      background: #dc3545;
+      display: none;
+    }
+    #status {
+      margin-top: 10px;
+      font-size: 14px;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Login Firebase</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <button id="daftarBtn">Daftar Akun</button>
+    <button id="googleBtn">Login Google</button>
+    <button id="lupaBtn">Lupa Password</button>
+    <button id="logoutBtn">Logout</button>
+    <p id="status">Belum login</p>
+  </div>
+
+  <script type="module">
+    // ======== Import Firebase modular SDK ========
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import {
+      getAuth,
+      createUserWithEmailAndPassword,
+      signInWithEmailAndPassword,
+      GoogleAuthProvider,
+      signInWithPopup,
+      sendPasswordResetEmail,
+      signOut,
+      onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    // ======== Konfigurasi Firebase Project ========
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ0qVnLphCYnKfiv0bobkSz2Bjf7nMPLM",
+      authDomain: "genertor-portofolio.firebaseapp.com",
+      projectId: "genertor-portofolio",
+      storageBucket: "genertor-portofolio.appspot.com",
+      messagingSenderId: "29883525083",
+      appId: "1:29883525083:web:a4bc9345a317c80a6829fe",
+      measurementId: "G-90VPKK6M8N"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const emailInput = document.getElementById("email");
+    const passInput = document.getElementById("password");
+    const loginBtn = document.getElementById("loginBtn");
+    const daftarBtn = document.getElementById("daftarBtn");
+    const googleBtn = document.getElementById("googleBtn");
+    const lupaBtn = document.getElementById("lupaBtn");
+    const logoutBtn = document.getElementById("logoutBtn");
+    const statusText = document.getElementById("status");
+
+    // ======== Jika user sudah login, langsung ke main.html ========
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        window.location.href = "main.html";
+      }
+    });
+
+    // ======== Tombol Login ========
+    loginBtn.onclick = async () => {
+      const email = emailInput.value.trim();
+      const pass = passInput.value.trim();
+
+      if (!email || !pass) {
+        statusText.textContent = "⚠️ Masukkan email dan password!";
+        return;
+      }
+
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+        statusText.textContent = "✅ Login berhasil! Mengalihkan...";
+        setTimeout(() => window.location.href = "main.html", 1000);
+      } catch (e) {
+        statusText.textContent = `❌ ${e.message}`;
+      }
+    };
+
+    // ======== Tombol Daftar Akun ========
+    daftarBtn.onclick = async () => {
+      const email = emailInput.value.trim();
+      const pass = passInput.value.trim();
+
+      if (!email || !pass) {
+        statusText.textContent = "⚠️ Masukkan email dan password!";
+        return;
+      }
+
+      try {
+        await createUserWithEmailAndPassword(auth, email, pass);
+        statusText.textContent = "✅ Akun berhasil dibuat! Silakan login.";
+      } catch (e) {
+        statusText.textContent = `❌ ${e.message}`;
+      }
+    };
+
+    // ======== Tombol Login Google ========
+    googleBtn.onclick = async () => {
+      try {
+        await signInWithPopup(auth, provider);
+        statusText.textContent = "✅ Login Google berhasil!";
+        setTimeout(() => window.location.href = "main.html", 1000);
+      } catch (e) {
+        statusText.textContent = `❌ ${e.message}`;
+      }
+    };
+
+    // ======== Tombol Lupa Password ========
+    lupaBtn.onclick = async () => {
+      const email = emailInput.value.trim();
+
+      if (!email) {
+        alert("Masukkan email dulu untuk reset password");
+        return;
+      }
+
+      try {
+        await sendPasswordResetEmail(auth, email);
+        alert("📩 Link reset password dikirim ke email kamu!");
+      } catch (e) {
+        statusText.textContent = `❌ ${e.message}`;
+      }
+    };
+
+    // ======== Tombol Logout ========
+    logoutBtn.onclick = async () => {
+      await signOut(auth);
+      statusText.textContent = "👋 Berhasil logout!";
+    };
+  </script>
+</body>
+</html>

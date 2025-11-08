@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Setting - Generator Portofolio</title>
+<style>
+  html,body{height:100%; margin:0; font-family:"Times New Roman", Times, serif; color:#cfe8ff; background:transparent}
+  .wrap{padding:22px; max-width:760px; margin:0 auto}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:18px; border-radius:12px; border:1px solid rgba(255,255,255,0.04)}
+  h2{color:#9be7ff; margin:0 0 10px 0}
+  .row{display:flex; gap:12px; align-items:center}
+  .toggle{display:flex; gap:8px; align-items:center}
+  .btn{padding:8px 12px; border-radius:8px; border:0; cursor:pointer}
+  .btn-danger{background:#ff6b6b; color:#041124}
+  .btn-primary{background:linear-gradient(90deg,#6cc4ff,#9be7ff); color:#041124}
+  .status{margin-top:12px; color:#cfe8ff}
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2>⚙️ Pengaturan</h2>
+      <p style="color:#bfc7d6">Atur preferensi aplikasi — termasuk tema gelap 'glass' yang elegan.</p>
+
+      <div style="margin-top:14px" class="row">
+        <div>
+          <div style="color:#cfe8ff; margin-bottom:6px"><strong>Tema</strong></div>
+          <div class="toggle">
+            <label><input type="radio" name="theme" value="dark" checked> Glass Dark</label>
+            <label style="margin-left:12px"><input type="radio" name="theme" value="light"> Light</label>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:18px">
+        <button class="btn btn-primary" id="apply">Terapkan Tema</button>
+        <button class="btn btn-danger" id="hapus">🗑️ Hapus Data Portofolio</button>
+        <div class="status" id="status"></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ0qVnLphCYnKfiv0bobkSz2Bjf7nMPLM",
+      authDomain: "genertor-portofolio.firebaseapp.com",
+      projectId: "genertor-portofolio",
+      storageBucket: "genertor-portofolio.appspot.com",
+      messagingSenderId: "29883525083",
+      appId: "1:29883525083:web:a4bc9345a317c80a6829fe"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const applyBtn = document.getElementById('apply');
+    const status = document.getElementById('status');
+    const hapus = document.getElementById('hapus');
+
+    // init radios based on parent theme
+    // ask parent for current theme by sending a message; parent stores it in localStorage
+    // we'll just keep default checked and allow apply to set
+
+    applyBtn.onclick = () => {
+      const sel = document.querySelector('input[name="theme"]:checked').value;
+      // inform parent
+      window.parent.postMessage({type:'SET_THEME', theme: sel}, '*');
+      // also persist to localStorage from within parent
+      status.textContent = '✅ Tema berhasil diterapkan: ' + sel;
+    };
+
+    let currentUser = null;
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return window.parent.location.href = "../Login.html";
+      currentUser = user;
+      window.parent.postMessage({type:'NAV_INFO', title:'Setting', desc:'Atur preferensi & hapus data'}, '*');
+    });
+
+    hapus.onclick = async () => {
+      if (!currentUser) return status.textContent = 'Silakan login ulang';
+      if (!confirm('Yakin ingin menghapus data portofolio?')) return;
+      try {
+        await deleteDoc(doc(db, 'portofolio', currentUser.uid));
+        status.textContent = '✅ Data portofolio dihapus.';
+      } catch (err) {
+        status.textContent = '❌ Gagal: ' + err.message;
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Preview Portofolio (Galeri)</title>
+<style>
+  html,body{height:100%; margin:0; font-family:"Times New Roman", Times, serif; background:transparent; color:#cfe8ff}
+  .wrap{padding:22px; max-width:920px; margin:0 auto}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:18px; border-radius:12px; border:1px solid rgba(255,255,255,0.04); box-shadow:0 6px 18px rgba(2,6,23,0.45)}
+  h2{color:#6cc4ff; margin:0 0 12px 0}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); gap:12px; margin-top:12px}
+  .card-img{background:#061022; border-radius:10px; overflow:hidden; height:180px; display:flex; align-items:center; justify-content:center}
+  .card-img img{width:100%; height:100%; object-fit:cover}
+  .meta{margin-top:12px; color:#cfe8ff}
+  .empty{color:#9aa9c6}
+  button{margin-top:12px; padding:8px 12px; background:#6cc4ff; color:#041124; border-radius:8px; border:0; cursor:pointer}
+  @media (max-width:600px){ .wrap{padding:12px} .card-img{height:120px} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2>💻 Preview Portofolio</h2>
+      <div id="meta" class="meta">Memuat data...</div>
+      <div id="gallery" class="grid"></div>
+      <div id="empty" class="empty" style="display:none; margin-top:12px">Belum ada portofolio / gambar tersimpan.</div>
+      <button id="refresh">🔄 Refresh</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ0qVnLphCYnKfiv0bobkSz2Bjf7nMPLM",
+      authDomain: "genertor-portofolio.firebaseapp.com",
+      projectId: "genertor-portofolio",
+      storageBucket: "genertor-portofolio.appspot.com",
+      messagingSenderId: "29883525083",
+      appId: "1:29883525083:web:a4bc9345a317c80a6829fe"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    const gallery = document.getElementById('gallery');
+    const meta = document.getElementById('meta');
+    const empty = document.getElementById('empty');
+    const refresh = document.getElementById('refresh');
+
+    async function load() {
+      gallery.innerHTML = '';
+      meta.textContent = 'Memuat data...';
+      empty.style.display = 'none';
+      const user = auth.currentUser;
+      if (!user) {
+        // ask parent to redirect to login
+        window.parent.location.href = "../Login.html";
+        return;
+      }
+      try {
+        const d = await getDoc(doc(db, 'portofolio', user.uid));
+        if (!d.exists()) {
+          meta.textContent = 'Belum ada data portofolio.';
+          empty.style.display = 'block';
+          return;
+        }
+        const data = d.data();
+        meta.innerHTML = `<strong>Nama:</strong> ${data.nama || '-'} &nbsp; • &nbsp; <strong>Bidang:</strong> ${data.bidang || '-'}`;
+        const imgs = data.images || [];
+        if (!imgs.length) {
+          empty.style.display = 'block';
+          return;
+        }
+        imgs.forEach(url => {
+          const el = document.createElement('div');
+          el.className = 'card-img';
+          const img = document.createElement('img');
+          img.src = url;
+          img.alt = 'Portofolio image';
+          el.appendChild(img);
+          gallery.appendChild(el);
+        });
+      } catch (err) {
+        meta.textContent = 'Gagal memuat data: ' + err.message;
+      }
+    }
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return window.parent.location.href = "../Login.html";
+      load();
+      window.parent.postMessage({type:'NAV_INFO', title:'Preview Kode', desc:'Lihat portofolio & galeri'}, '*');
+    });
+
+    refresh.addEventListener('click', load);
+  </script>
+</body>
+</html>

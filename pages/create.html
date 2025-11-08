@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Buat Portofolio (Upload Gambar)</title>
+<style>
+  :root{--muted:#cfe8ff;--accent:#6cc4ff}
+  html,body{height:100%; margin:0; font-family:"Times New Roman", Times, serif; background:transparent; color:var(--muted)}
+  .wrap{padding:22px; max-width:920px; margin:0 auto}
+  .card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); padding:18px; border-radius:12px; border:1px solid rgba(255,255,255,0.04); box-shadow:0 6px 18px rgba(2,6,23,0.45)}
+  h2{color:var(--accent); margin:0 0 10px 0}
+  label{display:block; margin-top:12px; color:#cfe8ff}
+  input,textarea,select{width:100%; padding:10px; margin-top:6px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:rgba(0,0,0,0.18); color:#eaf4ff}
+  .row{display:flex; gap:12px; flex-wrap:wrap}
+  .thumbs{display:flex; gap:10px; margin-top:10px; flex-wrap:wrap}
+  .thumb{width:110px; height:80px; border-radius:8px; overflow:hidden; background:#041124; display:flex; align-items:center; justify-content:center; border:1px solid rgba(255,255,255,0.04)}
+  .thumb img{width:100%; height:100%; object-fit:cover}
+  .small{font-size:13px; color:#9fbfe4}
+  .progress {height:8px; background:rgba(255,255,255,0.04); border-radius:6px; overflow:hidden; margin-top:8px;}
+  .bar {height:100%; width:0%; background:linear-gradient(90deg,#6cc4ff,#9be7ff)}
+  button{margin-top:14px; padding:10px 14px; background:linear-gradient(90deg,#6cc4ff,#9be7ff); color:#041124; font-weight:600; border-radius:8px; border:0; cursor:pointer}
+  button[disabled]{opacity:.5; cursor:not-allowed}
+  .status{margin-top:12px; color:#cfe8ff}
+  .note{font-size:13px; color:#9aa9c6; margin-top:6px}
+  @media (max-width:600px){ .wrap{padding:12px} .thumb{width:90px;height:70px} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h2>🧾 Buat Portofolio Baru (dengan Gambar)</h2>
+      <p class="small">Isi data dan upload sampai <strong>max 5 gambar</strong>. Gambar akan diupload ke Firebase Storage & URL disimpan ke Firestore.</p>
+
+      <form id="formPorto">
+        <label>Nama Lengkap</label>
+        <input id="nama" required>
+
+        <label>Bidang Keahlian</label>
+        <select id="bidang" required>
+          <option value="">-- Pilih --</option>
+          <option>Desain UI/UX</option>
+          <option>Web Developer</option>
+          <option>Fotografer</option>
+          <option>Animator</option>
+        </select>
+
+        <label>Deskripsi Singkat</label>
+        <textarea id="deskripsi" rows="4" required></textarea>
+
+        <label>Link (Website / Social)</label>
+        <input id="link" type="url" placeholder="https://...">
+
+        <label style="margin-top:12px">Upload Gambar (max 5)</label>
+        <input id="images" type="file" accept="image/*" multiple>
+        <div class="note">Preview file di bawah — klik lagi untuk mengganti sebelum simpan.</div>
+        <div class="thumbs" id="thumbs"></div>
+
+        <div class="progress" id="globalProgress" style="display:none"><div class="bar" id="globalBar"></div></div>
+
+        <button id="saveBtn" type="submit">💾 Simpan Portofolio & Upload Gambar</button>
+        <div class="status" id="status"></div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+    import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { getStorage, ref as sref, uploadBytesResumable, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-storage.js";
+
+    // ===== config =====
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ0qVnLphCYnKfiv0bobkSz2Bjf7nMPLM",
+      authDomain: "genertor-portofolio.firebaseapp.com",
+      projectId: "genertor-portofolio",
+      storageBucket: "genertor-portofolio.appspot.com",
+      messagingSenderId: "29883525083",
+      appId: "1:29883525083:web:a4bc9345a317c80a6829fe"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    // elements
+    const imagesInput = document.getElementById('images');
+    const thumbs = document.getElementById('thumbs');
+    const form = document.getElementById('formPorto');
+    const status = document.getElementById('status');
+    const saveBtn = document.getElementById('saveBtn');
+    const globalProgress = document.getElementById('globalProgress');
+    const globalBar = document.getElementById('globalBar');
+
+    let currentUser = null;
+    let selectedFiles = []; // FileList -> array
+    const MAX_FILES = 5;
+
+    onAuthStateChanged(auth, (user) => {
+      if (!user) return window.parent.location.href = "../Login.html";
+      currentUser = user;
+      // inform parent to update nav info
+      window.parent.postMessage({type:'NAV_INFO', title:'Buat Portofolio', desc:'Buat dan upload gambar portofolio'}, '*');
+    });
+
+    imagesInput.addEventListener('change', (e) => {
+      thumbs.innerHTML = '';
+      selectedFiles = Array.from(e.target.files).slice(0, MAX_FILES);
+      if (e.target.files.length > MAX_FILES) {
+        status.textContent = `⚠️ Maks ${MAX_FILES} file saja (mengambil ${MAX_FILES} pertama).`;
+      } else {
+        status.textContent = '';
+      }
+      selectedFiles.forEach(file => {
+        const r = new FileReader();
+        const wrap = document.createElement('div'); wrap.className = 'thumb';
+        r.onload = () => {
+          const img = document.createElement('img'); img.src = r.result;
+          wrap.appendChild(img); thumbs.appendChild(wrap);
+        };
+        r.readAsDataURL(file);
+      });
+    });
+
+    form.onsubmit = async (evt) => {
+      evt.preventDefault();
+      if (!currentUser) { status.textContent = 'Silakan login ulang'; return; }
+
+      const nama = document.getElementById('nama').value.trim();
+      const bidang = document.getElementById('bidang').value;
+      const deskripsi = document.getElementById('deskripsi').value.trim();
+      const link = document.getElementById('link').value.trim();
+
+      if (!nama || !bidang || !deskripsi) {
+        status.textContent = '⚠️ Isi semua field yang wajib.';
+        return;
+      }
+
+      saveBtn.disabled = true;
+      status.textContent = '🔄 Mulai upload...';
+      globalProgress.style.display = 'block';
+      globalBar.style.width = '0%';
+
+      try {
+        const uploadedUrls = [];
+
+        if (selectedFiles.length > 0) {
+          // upload files sequentially to avoid parallel overload, but show global progress
+          let totalBytes = selectedFiles.reduce((s,f)=>s+f.size,0);
+          let uploadedBytes = 0;
+
+          for (const file of selectedFiles) {
+            const nameSafe = file.name.replace(/\s+/g, '_');
+            const path = `portofolioImages/${currentUser.uid}/${Date.now()}_${nameSafe}`;
+            const storageRef = sref(storage, path);
+            const uploadTask = uploadBytesResumable(storageRef, file);
+
+            await new Promise((resolve, reject) => {
+              uploadTask.on('state_changed',
+                (snapshot) => {
+                  // update per-file progress into global
+                  const bytesTransferred = snapshot.bytesTransferred;
+                  // we estimate uploadedBytes by summing completed files + current snapshot
+                  // For simplicity, compute uploadedBytes as previous completed + bytesTransferred
+                  // We'll approximate by recalculating uploadedBytes from scratch:
+                  // (not exact but gives smooth bar)
+                  // compute previous files sizes completed:
+                  // (we use cumulative approach)
+                },
+                (err) => { reject(err); },
+                async () => {
+                  // finished this file
+                  const url = await getDownloadURL(uploadTask.snapshot.ref);
+                  uploadedUrls.push(url);
+                  // update uploadedBytes fully for this file
+                  uploadedBytes += file.size;
+                  const percent = Math.min(100, Math.round((uploadedBytes / totalBytes) * 100));
+                  globalBar.style.width = percent + '%';
+                  resolve();
+                }
+              );
+            });
+          }
+        }
+
+        // save doc to Firestore (document id = uid)
+        const docRef = doc(db, 'portofolio', currentUser.uid);
+        const payload = {
+          nama, bidang, deskripsi, link,
+          images: uploadedUrls || [],
+          email: currentUser.email,
+          tanggal: new Date().toISOString()
+        };
+        await setDoc(docRef, payload);
+        status.textContent = '✅ Portofolio & gambar berhasil disimpan!';
+        // reset UI
+        form.reset();
+        thumbs.innerHTML = '';
+        selectedFiles = [];
+        globalBar.style.width = '100%';
+      } catch (err) {
+        console.error(err);
+        status.textContent = '❌ Gagal upload/simpan: ' + err.message;
+      } finally {
+        saveBtn.disabled = false;
+        setTimeout(()=> { globalProgress.style.display = 'none'; globalBar.style.width = '0%'; }, 900);
+      }
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Generator Portofolio - Dashboard</title>
+  <style>
+    /* === Typography === */
+    :root{
+      --bg: #0b1020;
+      --panel: rgba(255,255,255,0.04);
+      --glass: rgba(255,255,255,0.03);
+      --muted: #bfc7d6;
+      --accent: #6cc4ff;
+      --accent-2: #9be7ff;
+      --glass-border: rgba(255,255,255,0.06);
+      --shadow: 0 6px 18px rgba(2,6,23,0.6);
+      --radius: 12px;
+    }
+    [data-theme="light"]{
+      --bg:#f4f6fb;
+      --panel: rgba(255,255,255,0.9);
+      --glass: rgba(255,255,255,0.75);
+      --muted:#4a5568;
+      --accent:#007bff;
+      --accent-2:#66b8ff;
+      --glass-border: rgba(0,0,0,0.06);
+      --shadow: 0 6px 18px rgba(12,16,24,0.06);
+    }
+
+    *{box-sizing:border-box}
+    html,body{height:100%; margin:0; font-family:"Times New Roman", Times, serif; -webkit-font-smoothing:antialiased;}
+    body{
+      background: linear-gradient(180deg, rgba(10,12,18,1) 0%, rgba(7,9,14,1) 100%);
+      color:var(--muted);
+      min-height:100vh;
+      display:flex;
+      flex-direction:column;
+      transition: background .4s ease;
+    }
+    [data-theme="light"] body{
+      background: linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+      color:var(--muted);
+    }
+
+    /* Topbar */
+    header{
+      height:64px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:0 18px;
+      position:sticky;
+      top:0;
+      z-index:20;
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-bottom: 1px solid var(--glass-border);
+    }
+    header .brand{display:flex; align-items:center; gap:12px; font-size:18px; color:var(--accent-2)}
+    header .brand .logo{
+      width:38px; height:38px; border-radius:10px;
+      background:linear-gradient(135deg,var(--accent),var(--accent-2));
+      display:flex; align-items:center; justify-content:center; color:#041124; font-weight:700;
+      box-shadow: 0 6px 20px rgba(3,9,24,0.35);
+    }
+    header .profile{display:flex; align-items:center; gap:12px; cursor:pointer}
+    header .profile img{width:40px;height:40px;border-radius:50%; border:2px solid var(--glass-border); object-fit:cover}
+
+    /* layout */
+    main{display:flex; flex:1; min-height:calc(100vh - 64px); overflow:hidden}
+
+    /* sidebar */
+    .sidebar{
+      width:240px;
+      padding:20px;
+      display:flex;
+      flex-direction:column;
+      gap:14px;
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      border-right:1px solid var(--glass-border);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+    }
+    .sidebar h3{color:var(--accent-2); text-align:center; margin:0; font-size:16px}
+    .nav{display:flex; flex-direction:column; gap:8px; margin-top:6px}
+    .nav a{
+      display:flex; align-items:center; gap:12px; padding:10px 12px;
+      border-radius:10px; text-decoration:none; color:var(--muted);
+      transition: all .18s ease;
+      font-size:15px;
+      border:1px solid transparent;
+    }
+    .nav a:hover{ transform:translateY(-4px); box-shadow:var(--shadow); color:var(--accent-2) }
+    .nav a.active{
+      background: linear-gradient(90deg, rgba(108,196,255,0.08), rgba(155,231,255,0.04));
+      color:var(--accent-2);
+      border:1px solid rgba(155,231,255,0.06);
+      box-shadow: 0 8px 28px rgba(40,60,90,0.12);
+    }
+    .spacer{flex:1}
+    .logout-btn{
+      padding:10px; text-align:center; border-radius:10px; cursor:pointer;
+      background:linear-gradient(90deg,#ff6b6b,#ff8b6b); color:#041124; font-weight:600;
+      border:1px solid rgba(255,255,255,0.06);
+    }
+
+    /* content area with iframe */
+    .content{flex:1; position:relative; overflow:hidden; display:flex; flex-direction:column}
+    .top-context{
+      padding:20px; display:flex; align-items:center; justify-content:space-between; gap:12px;
+      background:transparent; border-bottom:1px solid transparent;
+    }
+    .frame-wrap{flex:1; position:relative}
+    iframe{
+      position:absolute; inset:0; width:100%; height:100%; border:0;
+      background:transparent;
+      opacity:0; transform:translateY(6px) scale(0.998);
+      transition: opacity .35s ease, transform .35s ease;
+    }
+    iframe.loaded{ opacity:1; transform:translateY(0) scale(1); }
+
+    /* small cards inside top */
+    .info-card{
+      background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      padding:12px 14px; border-radius:10px; display:flex; gap:12px; align-items:center;
+      border:1px solid var(--glass-border);
+      box-shadow: 0 6px 18px rgba(2,6,23,0.35);
+    }
+    .info-card h4{margin:0; color:var(--accent-2)}
+    .info-card p{margin:0; color:var(--muted); font-size:13px}
+
+    /* responsive */
+    @media (max-width:900px){
+      .sidebar{width:78px; padding:14px}
+      .nav a{justify-content:center; font-size:13px}
+      .nav a span{display:none}
+      header .brand .text{display:none}
+    }
+    @media (max-width:600px){
+      header{padding:10px}
+      .sidebar{position:fixed; bottom:12px; left:50%; transform:translateX(-50%); width:94%; height:64px; border-radius:14px; flex-direction:row; align-items:center; justify-content:space-around; z-index:25; box-shadow:var(--shadow)}
+      main{margin-top:12px}
+      .nav a{padding:8px 10px; border-radius:10px}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo">GP</div>
+      <div class="text"><strong>Generator Portofolio</strong></div>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px">
+      <div class="info-card" title="Info singkat">
+        <div>
+          <h4 id="helloText">Memuat...</h4>
+          <p id="subText">Dashboard</p>
+        </div>
+      </div>
+      <div class="profile" id="profileBtn">
+        <div style="text-align:right;">
+          <div id="userEmail" style="font-size:13px; color:var(--muted)">--</div>
+        </div>
+        <img id="avatar" src="https://i.ibb.co/ySgL8T5/default-avatar.png" alt="Profil">
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <aside class="sidebar">
+      <h3>Menu</h3>
+      <nav class="nav" id="nav">
+        <a href="pages/home.html" target="frameContent" class="active" data-name="home">🏠 <span>Halaman Utama</span></a>
+        <a href="pages/create.html" target="frameContent" data-name="create">🧾 <span>Buat Portofolio</span></a>
+        <a href="pages/preview.html" target="frameContent" data-name="preview">💻 <span>Preview Kode</span></a>
+        <a href="pages/setting.html" target="frameContent" data-name="setting">⚙️ <span>Setting</span></a>
+      </nav>
+
+      <div class="spacer"></div>
+      <div class="logout-btn" id="logoutBtn">🚪 Logout</div>
+    </aside>
+
+    <section class="content">
+      <div class="top-context">
+        <div style="display:flex; align-items:center; gap:12px">
+          <div style="font-size:20px; color:var(--accent-2)"><strong id="pageTitle">Halaman Utama</strong></div>
+          <div style="color:var(--muted); font-size:14px" id="pageDesc">Ringkasan dan contoh portofolio</div>
+        </div>
+      </div>
+
+      <div class="frame-wrap">
+        <iframe src="pages/home.html" name="frameContent" id="frameContent"></iframe>
+      </div>
+    </section>
+  </main>
+
+  <!-- Firebase + theme + logic -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getAuth, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDQ0qVnLphCYnKfiv0bobkSz2Bjf7nMPLM",
+      authDomain: "genertor-portofolio.firebaseapp.com",
+      projectId: "genertor-portofolio",
+      storageBucket: "genertor-portofolio.appspot.com",
+      messagingSenderId: "29883525083",
+      appId: "1:29883525083:web:a4bc9345a317c80a6829fe",
+      measurementId: "G-90VPKK6M8N"
+    };
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    // Elements
+    const frame = document.getElementById('frameContent');
+    const navLinks = document.querySelectorAll('.nav a');
+    const logoutBtn = document.getElementById('logoutBtn');
+    const userEmail = document.getElementById('userEmail');
+    const helloText = document.getElementById('helloText');
+    const pageTitle = document.getElementById('pageTitle');
+    const pageDesc = document.getElementById('pageDesc');
+
+    // Theme management (glass dark + light) with localStorage
+    const THEME_KEY = 'gp_theme'; // 'dark' or 'light'
+    function applyTheme(theme) {
+      document.documentElement.setAttribute('data-theme', theme === 'light' ? 'light' : '');
+      localStorage.setItem(THEME_KEY, theme);
+    }
+    // load saved
+    const saved = localStorage.getItem(THEME_KEY) || 'dark';
+    applyTheme(saved);
+
+    // iframe load effect
+    frame.addEventListener('load', () => {
+      // fade in
+      frame.classList.remove('loaded');
+      setTimeout(()=> frame.classList.add('loaded'), 50);
+      // try update title / desc from iframe (if page sets window.parent.postMessage)
+    });
+
+    // Listen messages from iframe (settings page will send theme change)
+    window.addEventListener('message', (ev) => {
+      if (!ev.data) return;
+      if (ev.data.type === 'SET_THEME') {
+        applyTheme(ev.data.theme);
+      }
+      if (ev.data.type === 'NAV_INFO') {
+        // allowed: {title, desc}
+        if (ev.data.title) pageTitle.textContent = ev.data.title;
+        if (ev.data.desc) pageDesc.textContent = ev.data.desc;
+      }
+    }, false);
+
+    // nav active toggling + update pageTitle
+    navLinks.forEach(a => {
+      a.addEventListener('click', (e) => {
+        navLinks.forEach(x=>x.classList.remove('active'));
+        a.classList.add('active');
+        const name = a.dataset.name;
+        if (name === 'home') { pageTitle.textContent='Halaman Utama'; pageDesc.textContent='Ringkasan dan contoh portofolio' }
+        if (name === 'create') { pageTitle.textContent='Buat Portofolio'; pageDesc.textContent='Form pembuatan portofolio dan simpan data' }
+        if (name === 'preview') { pageTitle.textContent='Preview Kode'; pageDesc.textContent='Lihat hasil portofolio yang tersimpan' }
+        if (name === 'setting') { pageTitle.textContent='Setting'; pageDesc.textContent='Sesuaikan preferensi aplikasi' }
+      });
+    });
+
+    // Auth
+    onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        location.href = 'Login.html';
+      } else {
+        userEmail.textContent = user.email;
+        helloText.textContent = 'Halo, ' + (user.displayName || user.email.split('@')[0]);
+      }
+    });
+
+    logoutBtn.onclick = async () => {
+      await signOut(auth);
+      location.href = 'Login.html';
+    };
+
+    // Provide a small API for child frames (optional)
+    window.GP = {
+      setTheme: applyTheme
+    };
+  </script>
+</body>
+</html>
